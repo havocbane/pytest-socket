@@ -149,8 +149,17 @@ def socket_allow_hosts(allowed=None):
 
     def guarded_connect(inst, *args):
         host = host_from_connect_args(args)
-        if host and host in allowed:
-            return _true_connect(inst, *args)
+        if host:
+            if host in allowed:
+                return _true_connect(inst, *args)
+            else:  # Try resolving any DNS names in `allow_hosts` to look for a match
+                for hostname in allowed:
+                    try:
+                        ip = socket.gethostbyname(hostname)
+                    except Exception:  # noqa
+                        continue
+                    if ip == host:
+                        return _true_connect(inst, *args)
         raise SocketConnectBlockedError(allowed, host)
 
     socket.socket.connect = guarded_connect
